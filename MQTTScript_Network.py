@@ -27,24 +27,7 @@ print("Connecting to MQTT broker", BROKER, "...", end="")
 mqtt = MQTTClient(BROKER, port='1883')
 print("Connected!")
 
-# Define function to execute when a message is recieved on a subscribed topic.
-def mqtt_callback(topic, msg):
-    print("Connectivity Status = {} Detected Voltage Spike= {},".format(topic.decode('utf-8'), msg.decode('utf-8')))
-
-# Set callback function
-mqtt.set_callback(mqtt_callback)
-
-# Set a topic you will subscribe too. Publish to this topic via web client and watch microcontroller recieve messages.
-mqtt.subscribe(session + "/Host")
-
-#For nominal performance
-#While topic_decod.z_accel<0
-#Return nominal timestamp
-
-#if topic_decod.z_accel>0
-#Return EMERGENCY timestamp
-
-for t in range(100):
+while True:
     #Time Stamp
     timer= time.gmtime()
     current = timestamp()
@@ -55,16 +38,12 @@ for t in range(100):
     current.minutes = timer[4]
     current.seconds = timer[5]
 
-    
     # Microcontroller sends hellos statements.
     topic = "{}/Host".format(session)
-    data = "hello" + str(t)
-    print("Nominal Readings at Timestamp: {}/{}/{}  {}/{}/{}".format(current.days,current.month,current.year,current.hours,current.minutes,current.seconds))
+    data = str(degrees) + str(temperature)
+    print("Network Readings from: {}/{}/{}  {}/{}/{}".format(current.days,current.month,current.year,current.hours,current.minutes,current.seconds))
     mqtt.publish(topic, data)
     # Check for any messages in subscribed topics.
-    for _ in range(10):
-        mqtt.check_msg()
-        time.sleep(0.5)
 
 # free up resources
 # alternatively reset the micropyhton board before executing this program again
