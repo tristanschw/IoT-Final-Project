@@ -42,9 +42,6 @@ print("Connecting to MQTT broker", BROKER, "...", end="")
 mqtt = MQTTClient(BROKER, port='1883')
 print("Connected!")
 
-i2c = I2C(1,scl=Pin(22),sda=Pin(23),freq=400000)
-for i in range(len(i2c.scan())):
-	print(hex(i2c.scan()[i]))
 
 def Temperature(i2caddr):
 	temperature = i2c.readfrom_mem(i2caddr,0x20,2)
@@ -73,7 +70,7 @@ def Yaccel(i2caddr):
 		yacc = yacc -65536
 	return yacc/16393
 	
-# Calculates the angel of pole from center z-axis/original position
+#Calculates the angel of pole from center z-axis/original position
 def tilt(xacc,yacc,zacc):
 	x = xacc ** 2 + yacc ** 2 + zacc **2 
 	mag = math.sqrt(x)
@@ -86,6 +83,10 @@ def tilt(xacc,yacc,zacc):
 	return tilt
 
 
+
+i2c = I2C(1,scl=Pin(22),sda=Pin(23),freq=400000)
+for i in range(len(i2c.scan())):
+	print(hex(i2c.scan()[i]))
 buff=[0xA0]
 i2c.writeto_mem(i2c.scan()[i],0x10,bytes(buff))
 i2c.writeto_mem(i2c.scan()[i],0x11,bytes(buff))
@@ -120,12 +121,11 @@ while True:
     mqtt.publish(topic_angle, mess_angle)
     mqtt.publish(topic_temp, mess_temp)
     #mqtt.publish(topic,temp)
-    time.sleep(1)
+    time.sleep(2)
 
 
     
     # Check for any messages in subscribed topics.
 
-# free up resources
-# alternatively reset the micropyhton board before executing this program again
+
 mqtt.disconnect()
