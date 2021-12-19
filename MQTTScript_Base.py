@@ -51,73 +51,88 @@ while True:
     current.minutes = timer[4]
     current.seconds = timer[5]    
     t=0 
-    def mqtt_callback(topic, msg):
+    
+    topic_temp = "{}/temp".format(session)
+    topic_angle = "{}/angle".format(session)
+    toc = "{}".format(session)
+    
+    def mqtt_callback(topic_angle, msg):
         global temperature, degrees, t
-        print("Connectivity Status = {} Degrees = {} Temperature = ".format(topic.decode('utf-8'), msg.decode('utf-8')))
-        temperature = int(msg.decode('utf-8'))
-        degrees = 20
-        t=t+1
-        alert_sys(degrees, temperature,t)
+        print("Status = {}, {}".format(topic_angle.decode('utf-8'), msg.decode('utf-8')))
+        if topic_angle.decode('utf-8') == "{}/angle".format(session):
+            message = msg.decode('utf-8')
+            slice = message[len(message)-4:len(message)]
+            angle = float(slice)
+            t=t+1
+            alert_sys_angle(angle,t)
+        if topic_angle.decode('utf-8') == "{}/temp".format(session):
+            message = msg.decode('utf-8')
+            slice = message[len(message)-4:len(message)]
+            temp = float(slice)
+            t=t+1
+            alert_sys_temp(temp,t)
 
     # Set callback function
     mqtt.set_callback(mqtt_callback)
     # Set a topic you will subscribe too. Publish to this topic via web client and watch microcontroller recieve messages.
-    mqtt.subscribe(session + "/Host")
+    mqtt.subscribe(topic_angle)
+    mqtt.subscribe(topic_temp)
+
     # Check for any messages in subscribed topics.
     mqtt.check_msg()
-    time.sleep(0.1)
+    time.sleep(1)
     
     topic_error = "{}/mcu".format(session)
-    data_error = "Status: NETWORK ERROR 61.12.23: {}/{}/{} Received: {}:{}:{}".format(current.days,
+    data_error = "Status: NETWORK ERROR NO DATA RECEIVED 61.12.23: {}/{}/{} Received: {}:{}:{}".format(current.days,
     current.month, current.year, current.hours, current.minutes, current.seconds)
     print("Sent to Main COM: '{}'".format(data_error))
     mqtt.publish(topic_error, data_error)
     time.sleep(1)
-    
-    def alert_sys(temperature, degrees, t):
-        # Time Stamp
+    led.green(0), led.red(0), led.blue(255)
+    #Function that defines the LED Alert System
+    def alert_sys_angle(degrees, t):
         topic = "{}/mcu".format(session)
-        if degrees<=30 and temperature <32:
+        if degrees<30:
+            data = "Status" + str(t) +" "+ "Nominal Readings 61.12.23: {}/{}/{} Received: {}:{}:{}".format(current.days,
+              current.month, current.year, current.hours, current.minutes, current.seconds)
+            mqtt.publish(topic, data)
+            print("Sent to COM: '{}'".format(data))
+            t=t+1 
+            led.green(50), led.red(0), led.blue(0)
+            time.sleep(.7)
+        elif degrees>30:
+            data = "Status" + str(t) +" "+ "WARNING CUT 61.12.23: {}/{}/{} Received: {}:{}:{}".format(current.days,
+            current.month, current.year, current.hours, current.minutes, current.seconds)
+            print("Sent to COM: '{}'".format(data))
+            mqtt.publish(topic, data)
+            t=t+1
+            for _ in range(5): 
+                led.green(0), led.red(255), led.blue(0)
+                time.sleep(0.6)
+                led.green(0), led.red(0), led.blue(0)
+                time.sleep(0.6)
+
+    def alert_sys_temp(temperature, t):
+        topic = "{}/mcu".format(session)
+        if temperature <28:
             data = "Status" + str(t) +" "+ "Nominal Readings 61.12.23: {}/{}/{} Received: {}:{}:{}".format(current.days,
               current.month, current.year, current.hours, current.minutes, current.seconds)
             mqtt.publish(topic, data)
             print("Sent to COM: '{}'".format(data))
             t=t+1
-            for _ in range(5): 
-                led.green(50), led.red(0), led.blue(0)
-        elif degrees>30:
-            data = "Status" + str(t) +" "+ "WARNING CUT 61.12.23: {}/{}/{} Received: {}:{}:{}".format(current.days,
-              current.month, current.year, current.hours, current.minutes, current.seconds)
-            print("Sent to COM: '{}'".format(data))
-            mqtt.publish(topic, data)
-            t=t+1
-            for _ in range(5): 
-                led.green(0), led.red(255), led.blue(0)
-                time.sleep(0.1)
-                led.green(0), led.red(255), led.blue(0)
-                time.sleep(0.1)
-        if degrees not in range(90):
-            data = "Status" + str(t) +" "+ "NETWORK ERROR 61.12.23: {}/{}/{} Received: {}:{}:{}".format(current.days,
-              current.month, current.year, current.hours, current.minutes, current.seconds)
-            mqtt.publish(topic, data)
-            print("Sent to COM: '{}'".format(data))
-            t=t+1
-            for _ in range(5): 
-                led.green(255), led.red(255), led.blue(0)
-                time.sleep(0.1)
-                led.green(0), led.red(0), led.blue(0)
-                time.sleep(0.1)
-        if temperature>32:
+            led.green(255), led.red(0), led.blue(0)
+            time.sleep(.7)
+        if temperature>28:
             data = "Status" + str(t) +" "+ "HIGH TEMPERATURE WARNING 61.12.23: {}/{}/{} Received: {}:{}:{}".format(current.days,
               current.month, current.year, current.hours, current.minutes, current.seconds)
             print("Sent to Main COM: '{}'".format(data))
             mqtt.publish(topic, data)
             t=t+1
             for _ in range(5): 
-                led.green(0), led.red(255), led.blue(0)
-                time.sleep(0.1)
+                led.green(255), led.red(255), led.blue(0)
+                time.sleep(0.6)
                 led.green(0), led.red(0), led.blue(0)
-                time.sleep(0.1)
+                time.sleep(0.6)
 
 # free up resources
 # alternatively reset the micropyhton board before executing this program again
